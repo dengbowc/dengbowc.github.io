@@ -89,15 +89,24 @@
 
 
 
-<meta name="description" content="邓波的个人站">
-<meta property="og:type" content="website">
-<meta property="og:title" content="一个二次猿的小站">
-<meta property="og:url" content="https://dengbowc.github.io/index.html">
+<meta name="description" content="上篇说道，kvo是基于kvc来实现的，现在来研究一下kvo的实现方式。
+前言：苹果的官方文档在这里kvo是这么一种机制：当一个对象的属性发生改变后，另一个对象会收到其改变的通知。假设我们生成这么两个类：
+12345678910111213141516171819@interface Account : NSObject@property (nonatomic ,assign) double bal">
+<meta property="og:type" content="article">
+<meta property="og:title" content="kvo详解">
+<meta property="og:url" content="https://dengbowc.github.io/2017/03/17/kvo详解/index.html">
 <meta property="og:site_name" content="一个二次猿的小站">
-<meta property="og:description" content="邓波的个人站">
+<meta property="og:description" content="上篇说道，kvo是基于kvc来实现的，现在来研究一下kvo的实现方式。
+前言：苹果的官方文档在这里kvo是这么一种机制：当一个对象的属性发生改变后，另一个对象会收到其改变的通知。假设我们生成这么两个类：
+12345678910111213141516171819@interface Account : NSObject@property (nonatomic ,assign) double bal">
+<meta property="og:image" content="https://dengbowc.github.io/images/kvo详解1.png">
+<meta property="og:updated_time" content="2017-03-17T10:10:08.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="一个二次猿的小站">
-<meta name="twitter:description" content="邓波的个人站">
+<meta name="twitter:title" content="kvo详解">
+<meta name="twitter:description" content="上篇说道，kvo是基于kvc来实现的，现在来研究一下kvo的实现方式。
+前言：苹果的官方文档在这里kvo是这么一种机制：当一个对象的属性发生改变后，另一个对象会收到其改变的通知。假设我们生成这么两个类：
+12345678910111213141516171819@interface Account : NSObject@property (nonatomic ,assign) double bal">
+<meta name="twitter:image" content="https://dengbowc.github.io/images/kvo详解1.png">
 
 
 
@@ -125,13 +134,13 @@
 
 
 
-  <link rel="canonical" href="https://dengbowc.github.io/"/>
+  <link rel="canonical" href="https://dengbowc.github.io/2017/03/17/kvo详解/"/>
 
 
 
 
 
-  <title> 一个二次猿的小站 </title>
+  <title> kvo详解 | 一个二次猿的小站 </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -156,9 +165,7 @@
     
   
 
-  <div class="container one-collumn sidebar-position-left 
-   page-home 
- ">
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
     <div class="headband"></div>
 
     <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
@@ -251,9 +258,9 @@
         <div class="content-wrap">
           <div id="content" class="content">
             
-  <section id="posts" class="posts-expand">
+
+  <div id="posts" class="posts-expand">
     
-      
 
   
 
@@ -286,10 +293,7 @@
             
             
               
-                
-                <a class="post-title-link" href="/2017/03/17/kvo详解/" itemprop="url">
-                  kvo详解
-                </a>
+                kvo详解
               
             
           </h1>
@@ -362,9 +366,7 @@
       
 
       
-        
-          
-            <p>上篇说道，kvo是基于kvc来实现的，现在来研究一下kvo的实现方式。</p>
+        <p>上篇说道，kvo是基于kvc来实现的，现在来研究一下kvo的实现方式。</p>
 <h2 id="前言："><a href="#前言：" class="headerlink" title="前言："></a>前言：</h2><p>苹果的官方文档在<a href="https://developer.apple.com/library/etc/redirect/xcode/content/1189/documentation/Cocoa/Conceptual/KeyValueObserving/KeyValueObserving.html#//apple_ref/doc/uid/10000177i" target="_blank" rel="external">这里</a><br>kvo是这么一种机制：当一个对象的属性发生改变后，另一个对象会收到其改变的通知。<br>假设我们生成这么两个类：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">@interface Account : NSObject</div><div class="line"></div><div class="line">@property (nonatomic ,assign) double balance;</div><div class="line"></div><div class="line">@property (nonatomic ,assign) double  interestRate;</div><div class="line"></div><div class="line">@end</div><div class="line"></div><div class="line">@implementation Account</div><div class="line"></div><div class="line">@end</div><div class="line"></div><div class="line">@interface Person : NSObject</div><div class="line"></div><div class="line">@end</div><div class="line"></div><div class="line">@implementation Person</div><div class="line"></div><div class="line">@end</div></pre></td></tr></table></figure>
 <p>如果一个Account对象代表一个Person对象的银行账户，则Person的实例就需要实时了解其对应Account对象发生的变化。<br>我们可以通过让Person定时去查看Account来获取其变化，但显然这是一种很low的做法，在某些情况下可实践性也不高。对此，苹果为我们提供了kvo，即Key-Value Observing，来让Person能够在Account发生改变的时候立即监听到这个变化。</p>
@@ -392,16 +394,20 @@
 <p>如果balance的改变会触发其他值的变化，则可以这么做：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">- (void)setBalance:(double)theBalance &#123;</div><div class="line">    [self willChangeValueForKey:@&quot;balance&quot;];</div><div class="line">    [self willChangeValueForKey:@&quot;itemChanged&quot;];</div><div class="line">    _balance = theBalance;</div><div class="line">    _itemChanged = _itemChanged+1;</div><div class="line">    [self didChangeValueForKey:@&quot;itemChanged&quot;];</div><div class="line">    [self didChangeValueForKey:@&quot;balance&quot;];</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
 <h2 id="总结："><a href="#总结：" class="headerlink" title="总结："></a>总结：</h2><p>当然，这篇文章也只是介绍了kvo的用法以及一些基本原理，而kvo的底层实现则是依靠了isa-swizzling这么个黑魔法，挖坑待填。。。</p>
 
-          
+      
+    </div>
+
+    <div>
+      
         
+
       
     </div>
 
     <div>
       
-    </div>
+        
 
-    <div>
       
     </div>
 
@@ -410,488 +416,38 @@
       
 
       
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="https://dengbowc.github.io/2017/03/15/kvc详解/">
-
-  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
-    <meta itemprop="name" content="邓波">
-    <meta itemprop="description" content="">
-    <meta itemprop="image" content="/images/bolgIcon.jpg">
-  </span>
-
-  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-    <meta itemprop="name" content="一个二次猿的小站">
-    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
-      <img style="display:none;" itemprop="url image" alt="一个二次猿的小站" src="">
-    </span>
-  </span>
-
-    
-      <header class="post-header">
-
         
-        
-          <h1 class="post-title" itemprop="name headline">
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
             
+              <a href="/2017/03/15/kvc详解/" rel="next" title="kvc详解">
+                <i class="fa fa-chevron-left"></i> kvc详解
+              </a>
             
-              
-                
-                <a class="post-title-link" href="/2017/03/15/kvc详解/" itemprop="url">
-                  kvc详解
-                </a>
-              
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
             
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-03-15T17:32:01+08:00">
-                2017-03-15
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Objective-C/" itemprop="url" rel="index">
-                    <span itemprop="name">Objective-C</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
+          </div>
         </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
       
 
       
-        
-          
-            <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>kvc，即Key-Value coding，是苹果为我们提供的不直接通过setter和getter来访问对象成员的一种方式，这篇文章主要介绍其原理和便利性。</p>
-<h1 id="咳咳咳。。下面进入正题"><a href="#咳咳咳。。下面进入正题" class="headerlink" title="咳咳咳。。下面进入正题"></a>咳咳咳。。下面进入正题</h1><p>我们在日常开发中会经常使用到kvc中定义的方法，这些方法实际上是被包含在NSKeyValueCoding这么个协议里面的。继承自NSObejct的对象默认会遵守NSKeyValueCoding协议，且会继承NSObject对协议中方法的默认实现。想要同过kvc来访变量，需要：</p>
-<h3 id="如果是访问对象属性"><a href="#如果是访问对象属性" class="headerlink" title="如果是访问对象属性"></a>如果是访问对象属性</h3><p>setValue:forKey: 和valueForKey:的默认实现是通过key去找accessMethod，如果没有找到且+（BOOL）accessInstanceVariablesDirectly返回了YES,则会去找对应的<em><key>，<key>，<iskey>，</iskey></key></key></em><iskey>的实例变量，这也是为何@private的成员变量可以通过kvc来赋值的原因。其实根据key来找成员变量并不是简单的直接下划线+变量名，apple为其制定了一个<a href="https://developer.apple.com/library/prerelease/content/documentation/Cocoa/Conceptual/KeyValueCoding/SearchImplementation.html#//apple_ref/doc/uid/20000955-CJBBBFFA" target="_blank" rel="external">搜索规则</a>。<br>(这里再提一嘴，如果你想实现真正的@private成员变量，在OC中只靠这一个关键字是不行的，因为kvc还是可以获取到，屏蔽kvc的获取可以通过重写+（BOOL）accessInstanceVariablesDirectly返回NO来实现，但是runtime还是可以获取到==。。)<br>如果没找到，调用valueForUndefinedKey:/setValue:forUndefinedKey:，默认的实现是抛出NSUndefinedKeyException这么一个异常。<br>假如我们定义了这么一个类型：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div></pre></td><td class="code"><pre><div class="line">@interface Person : NSObject</div><div class="line"></div><div class="line">@property(nonatomic ,copy)NSString *name;</div><div class="line"></div><div class="line">@property(nonatomic ,copy)NSString *mobile;</div><div class="line"></div><div class="line">@end</div><div class="line"></div><div class="line">@implementation Person</div><div class="line"></div><div class="line"></div><div class="line">@end</div><div class="line"></div><div class="line">@interface Transaction : NSObject</div><div class="line"></div><div class="line">@property(nonatomic ,copy)NSString *date;</div><div class="line"></div><div class="line">@property(nonatomic ,assign)CGFloat amount;</div><div class="line"></div><div class="line">@property(nonatomic ,assign)NSInteger transId;</div><div class="line"></div><div class="line">@end</div><div class="line"></div><div class="line">@implementation Transaction </div><div class="line"></div><div class="line"></div><div class="line">@end</div><div class="line"></div><div class="line"></div><div class="line">@interface BankAccount : NSObject</div><div class="line">@property (nonatomic) NSNumber* currentBalance; // An attribute</div><div class="line">@property (nonatomic) Person* owner; // A to-one relation</div><div class="line">@property (nonatomic) NSArray&lt; Transaction* &gt;* transactions; // A to-many relation</div><div class="line">@end</div><div class="line"></div><div class="line">@implementation BankAccount</div><div class="line"></div><div class="line">@end</div></pre></td></tr></table></figure></iskey></p>
-<p>根据上面的描述，默认我们可以用setValue:forKey: 和valueForKey:访问这几个属性，假设Person类中还包含了一个mobile的字符串属性，则可以通过valueForKeyPath:@”owner.mobile”来访问owner的mobile属性，使用valueForKeyPath的前提是keyPath中的成员都必须实现了NSKeyValueCoding协议的方法，否则会调用valueForUndefinedKey:/setValue:forUndefinedKey:，抛出异常。</p>
-<p>当我们通过keyPath访问集合类型的时候，例如在本例中，访问了transactions.transId,则会自动帮我们返回包含transactions数组中所有的transId数据的数组:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">BankAccount *account = [BankAccount new];</div><div class="line">NSLog(@&quot;\ntransIds:%@&quot;,[account valueForKeyPath:@&quot;transactions.transId&quot;]);</div></pre></td></tr></table></figure></p>
-<p>打印结果：<br><img src="/images/kvc详解1.png" alt="img"></p>
-<p>类似getter，NSObject对于setter在NSKeyValueCoding中也有一套默认的实现规则，和getter基本类似，这里不再细说，但需要注意的是如果你尝试对一个基本类型的属性设置一个nil，则消息接收者会给自己发送一条setNilValueForKey:消息，其默认实现会抛出NSInvalidArgumentException异常。</p>
-<h3 id="如果是访问容器属性-NSArray、NSSet等"><a href="#如果是访问容器属性-NSArray、NSSet等" class="headerlink" title="如果是访问容器属性(NSArray、NSSet等)"></a>如果是访问容器属性(NSArray、NSSet等)</h3><p>虽然我们还是可以通过valueForKey:来直接访问，但是苹果为我们提供了一种更为方便的方式：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">- (NSMutableArray *)mutableArrayValueForKey:(NSString *)key</div></pre></td></tr></table></figure></p>
-<p>使用这种方式的好处是可以直接通过获取到的mutableArray对象对array属性进行操作(不管是可变还是不可变),看代码：<br>先定义集合属性：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">@property (nonatomic,strong) NSArray *testArray;</div></pre></td></tr></table></figure></p>
-<p>然后尝试修改testArray的内容：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">    NSMutableArray *test = [self.account mutableArrayValueForKey:@&quot;testArray&quot;];</div><div class="line">    [test removeObjectAtIndex:1];</div><div class="line">    NSLog(@&quot;%@&quot;,[self.account valueForKey:@&quot;testArray&quot;]);</div></pre></td></tr></table></figure></p>
-<p>运行后修改成功。这就是kvc自动帮我们实现的功能，想象一下如果不用这种方式你想修改一个不可变数组的属性需要的做法：先根据属性值创建一个可变数组，然后做删改后再赋值回去，其实kvc的内部实现也大致如此。此处有一个小细节：在修改前和修改后分别设置断点：<br><img src="/images/kvc详解2.png" alt="img"><br>运行查看控制台：<br>修改前：<br><img src="/images/kvc详解3.png" alt="img"><br>修改后：<br><img src="/images/kvc详解4.png" alt="img"><br>可见testArray的真实类型其实发生了改变，修改后它已经是一个可变数组。可以通过改变property关键字为copy来解决：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">@property (nonatomic,copy) NSArray *testArray;</div></pre></td></tr></table></figure></p>
-<p>再次断点查看，发现修改前后已经都是不可变类型。所以NSObject的默认实现应该只是简单的将mutableArray赋值回属性，我们手动加个copy即可以解决。<br>其实- (NSMutableArray <em>)mutableArrayValueForKey:(NSString </em>)key的实现有一套完整的规则，这里只介绍其用法，感兴趣的同学可以看<a href="https://developer.apple.com/reference/objectivec/nsobject/1416339-mutablearrayvalueforkey" target="_blank" rel="external">这里</a>。</p>
-<p>这个方法还有一个好处是容器属性的修改可以被kvo监听，默认我们是监听不到的：<br>为了方便测试，我们将testArray改为mutable类型：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">@property (nonatomic,strong) NSMutableArray  *testArray;</div></pre></td></tr></table></figure></p>
-<p>添加监听：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">self.account = [BankAccount new];</div><div class="line">[self.account addObserver:self forKeyPath:@&quot;testArray&quot; options:NSKeyValueObservingOptionNew context:nil];</div></pre></td></tr></table></figure></p>
-<p>先用原始方法修改：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">[self.account.testArray removeObjectAtIndex:1];</div></pre></td></tr></table></figure></p>
-<p>监听回调是不会走的，采用kvc：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">NSMutableArray *test = [self.account mutableArrayValueForKey:@&quot;testArray&quot;];</div><div class="line">[test removeObjectAtIndex:1];</div></pre></td></tr></table></figure></p>
-<p>回调执行。</p>
-<p>以上介绍的如此好用的kvc的种种实现已经被NSObject默认完成，所以我们在日常开发中几乎没什么机会去重写NSKeyValueCoding协议中的方法，除非你需要修改一下kvc access属性的规则或自定义其他的一些功能。值得一提的是，kvo的实现就是依赖于kvc的，这里先挖个坑吧，以后补上。</p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
       
     </footer>
   </article>
 
 
-    
-      
 
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="https://dengbowc.github.io/2017/03/14/timer和self的循环引用及其解决方式/">
-
-  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
-    <meta itemprop="name" content="邓波">
-    <meta itemprop="description" content="">
-    <meta itemprop="image" content="/images/bolgIcon.jpg">
-  </span>
-
-  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-    <meta itemprop="name" content="一个二次猿的小站">
-    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
-      <img style="display:none;" itemprop="url image" alt="一个二次猿的小站" src="">
-    </span>
-  </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2017/03/14/timer和self的循环引用及其解决方式/" itemprop="url">
-                  timer和self的循环引用及其解决方式
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-03-14T11:29:05+08:00">
-                2017-03-14
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Objective-C/" itemprop="url" rel="index">
-                    <span itemprop="name">Objective-C</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h2 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h2><p>日常开发过程中，我们经常会用到NSTimer这么个东西，但是相信不光我一个人被timer坑过：为啥停不掉？为啥控制器退出了这玩意还在跑。。。</p>
-<p>一般我们使用timer都是这么个形式：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div></pre></td><td class="code"><pre><div class="line">@interface ViewController ()</div><div class="line"></div><div class="line">@property (nonatomic,strong)NSTimer *timer;</div><div class="line"></div><div class="line">@end</div><div class="line"></div><div class="line">@implementation ViewController</div><div class="line"></div><div class="line">- (void)viewDidLoad &#123;</div><div class="line">    [super viewDidLoad];</div><div class="line">    </div><div class="line">    NSTimer *timer = [NSTimer timerWithTimeInterval:1 target:self selector:@selector(timerTest) userInfo:nil repeats:YES];</div><div class="line">    self.timer = timer;</div><div class="line">    [[NSRunLoop mainRunLoop]addTimer:self.timer forMode:NSDefaultRunLoopMode];</div><div class="line">&#125;</div><div class="line"></div><div class="line">- (void)timerTest &#123;</div><div class="line">    NSLog(@&quot;test log&quot;);</div><div class="line">&#125;</div><div class="line"></div><div class="line">- (void)dealloc &#123;</div><div class="line">    NSLog(@&quot;i go&quot;);</div><div class="line">&#125;</div><div class="line"></div><div class="line">@end</div></pre></td></tr></table></figure>
-<p>当本控制pop出去的时候，你会发现timer还在跑，回调会一直执行，切dealloc方法并没有走，没错，传说中的内存泄漏出现了。</p>
-<h2 id="原因分析"><a href="#原因分析" class="headerlink" title="原因分析"></a>原因分析</h2><p>查看一下timer的文档：<a href="https://developer.apple.com/reference/foundation/nstimer?language=objc" target="_blank" rel="external">NSTimer</a><br>即timer会对其target加一个强引用，如果self也持有timer，就会造成retain cycle。</p>
-<p><img src="/images/Snip20170314_13.png" alt="img"></p>
-<p>对解决这种循环引用已经很有经验的你或许会选择这样做：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">@interface ViewController ()</div><div class="line"></div><div class="line">@property (nonatomic,weak)NSTimer *timer;</div><div class="line"></div><div class="line">@end</div></pre></td></tr></table></figure>
-<p>可惜运行结果并不是你想的那样，这时因为这里面不光是self-timer的循环引用，还多了个runloop，timer加入到runloop时，runloop会对其也添加一个循环引用：</p>
-<p><img src="/images/Snip20170314_14.png" alt="img"></p>
-<p>可见，即使self没有强引用timer，由于runloop一直抓着timer(只要timer还没有invalidate)，所以self也会由于timer对target的强引用而无法释放。</p>
-<h2 id="解决方法"><a href="#解决方法" class="headerlink" title="解决方法"></a>解决方法</h2><h3 id="在合适的时机invalidate掉timer"><a href="#在合适的时机invalidate掉timer" class="headerlink" title="在合适的时机invalidate掉timer"></a>在合适的时机invalidate掉timer</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">- (void)viewDidDisappear:(BOOL)animated &#123;</div><div class="line">    [super viewDidDisappear:animated];</div><div class="line">    [self.timer invalidate];</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-<p>类似这种处理，可以让runloop释放对timer的强引用，同时invalidate方法不光将timer移除出runloop，还会释放其对target的强引用，从而解决了循环引用的问题。</p>
-<h3 id="通过消息转发来解决"><a href="#通过消息转发来解决" class="headerlink" title="通过消息转发来解决"></a>通过消息转发来解决</h3><p>新建一个proxy类：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div></pre></td><td class="code"><pre><div class="line">@interface TimerProxy : NSProxy</div><div class="line"></div><div class="line">- (instancetype)initWithTarget:(id)target;</div><div class="line"></div><div class="line">@property (nonatomic,weak)id target;</div><div class="line"></div><div class="line">@end</div><div class="line"></div><div class="line">@implementation TimerProxy</div><div class="line"></div><div class="line">- (instancetype)initWithTarget:(id)target &#123;</div><div class="line">    _target = target;</div><div class="line">    </div><div class="line">    return self;</div><div class="line">&#125;</div><div class="line"></div><div class="line">- (id)forwardingTargetForSelector:(SEL)selector &#123;</div><div class="line">    return _target;</div><div class="line">&#125;</div><div class="line"></div><div class="line">- (void)forwardInvocation:(NSInvocation *)invocation &#123;</div><div class="line">    void *null = NULL;</div><div class="line">    [invocation setReturnValue:&amp;null];</div><div class="line">&#125;</div><div class="line"></div><div class="line">- (NSMethodSignature *)methodSignatureForSelector:(SEL)selector &#123;</div><div class="line">    return [NSObject instanceMethodSignatureForSelector:@selector(init)];</div><div class="line">&#125;</div><div class="line"></div><div class="line">@end</div></pre></td></tr></table></figure></p>
-<p>然后在把其作为timer的target：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">- (void)viewDidLoad &#123;</div><div class="line">    [super viewDidLoad];</div><div class="line">    </div><div class="line">    TimerProxy *proxy = [[TimerProxy alloc]initWithTarget:self];</div><div class="line">    </div><div class="line">    NSTimer *timer = [NSTimer timerWithTimeInterval:1 target:proxy selector:@selector(timerTest) userInfo:nil repeats:YES];</div><div class="line">    self.timer = timer;</div><div class="line">    [[NSRunLoop mainRunLoop]addTimer:self.timer forMode:NSDefaultRunLoopMode];</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-<p>程序运行，发现控制器dealloc成功打印，但到这里还是有问题的，因为timer和它的target还没有被释放。<br>所以要在dealloc里面把timer给invalidate掉：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">- (void)dealloc &#123;</div><div class="line">    NSLog(@&quot;i go&quot;);</div><div class="line">    [self.timer invalidate];</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<p>最后的关系图为：</p>
-<p><img src="/images/Snip20170314_15.png" alt="img"></p>
-<p>可见控制器是可以被释放的，但是timer需要在控制器dealloc的时候进行处理。</p>
-<p>不了解消息转发的同学请参考<a href="http://southpeak.github.io/2014/11/03/objective-c-runtime-3/" target="_blank" rel="external">这篇文章</a>。</p>
-
-          
-        
+    <div class="post-spread">
       
     </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="https://dengbowc.github.io/2017/02/22/hexo搭建-吐槽/">
-
-  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
-    <meta itemprop="name" content="邓波">
-    <meta itemprop="description" content="">
-    <meta itemprop="image" content="/images/bolgIcon.jpg">
-  </span>
-
-  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-    <meta itemprop="name" content="一个二次猿的小站">
-    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
-      <img style="display:none;" itemprop="url image" alt="一个二次猿的小站" src="">
-    </span>
-  </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2017/02/22/hexo搭建-吐槽/" itemprop="url">
-                  hexo搭建+吐槽
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-02-22T11:16:51+08:00">
-                2017-02-22
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/daily/" itemprop="url" rel="index">
-                    <span itemprop="name">daily</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>   啦啦啦，也算是有了一个自己的个人小站了~花了近一天的时间，用的貌似是最大众的hexo+next哈==<br>搬运一下吧：<br><a href="http://ibruce.info/2013/11/22/hexo-your-blog/?utm_source=tuicool" target="_blank" rel="external">博客搭建</a><br><a href="http://ibruce.info/2013/11/26/markdown/" target="_blank" rel="external">markdown语法</a><br><a href="https://segmentfault.com/a/1190000002632530" target="_blank" rel="external">hexo常用命令</a></p>
-<p>   主要是希望用这个来记录一下自己生活上的感悟，但是鉴于本人是个懒人，可能更新会很慢吧==</p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-  </section>
-
-  
+  </div>
 
           
           </div>
@@ -899,6 +455,10 @@
 
 
           
+  <div class="comments" id="comments">
+    
+  </div>
+
 
         </div>
         
@@ -918,8 +478,17 @@
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
 
-      <section class="site-overview sidebar-panel sidebar-panel-active">
+      <section class="site-overview sidebar-panel">
         <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
           <img class="site-author-image" itemprop="image"
                src="/images/bolgIcon.jpg"
@@ -977,6 +546,22 @@
 
       </section>
 
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言："><span class="nav-number">1.</span> <span class="nav-text">前言：</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#kvo的实现"><span class="nav-number">2.</span> <span class="nav-text">kvo的实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#进一步分析："><span class="nav-number">3.</span> <span class="nav-text">进一步分析：</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结："><span class="nav-number">4.</span> <span class="nav-text">总结：</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
       
 
       
@@ -1089,6 +674,10 @@
 
 
   
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
 
   
 
